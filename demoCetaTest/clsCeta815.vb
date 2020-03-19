@@ -22,7 +22,6 @@ Public Class Ceta815
 
     ''' <summary>
     ''' @todo add comments for this function
-    ''' TODO: different type of todo comment
     ''' </summary>
     ''' <returns></returns>
     Public Function InitSerialConnection() As Boolean
@@ -40,7 +39,7 @@ Public Class Ceta815
 
             If _comPort.IsOpen Then
 
-                ' @todo test Connection with ceta
+                ' @todo test connection with ceta
                 Debug.WriteLine("comPort initialization succeeded!")
 
                 AddHandler _comPort.DataReceived, AddressOf ComPortDataReceivedHandler
