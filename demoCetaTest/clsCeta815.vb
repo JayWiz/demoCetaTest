@@ -34,7 +34,7 @@ Public Class Ceta815
 
             If _comPort.IsOpen Then
 
-                'TODO: Test Connection
+                ' @todo test Connection with ceta
                 Debug.WriteLine("comPort initialization succeeded!")
 
                 AddHandler _comPort.DataReceived, AddressOf ComPortDataReceivedHandler
@@ -182,7 +182,7 @@ Public Class Ceta815
                 End If
 
                 ' remove old data
-                ' TODO: optimize
+                ' @todo optimize deletion of old data in _receivedBytesQueue, could cause problems
                 For i = 5 + telegramLength - 1 To 0 step - 1
                     _receivedBytesQueue.RemoveAt(i)
                 Next
