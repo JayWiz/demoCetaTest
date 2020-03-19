@@ -1,6 +1,7 @@
 ﻿Imports System.Collections.ObjectModel
 Imports System.Collections.Specialized
 Imports System.IO.Ports
+Imports System.Text
 
 Public Class Ceta815
     Private Shared _comPort As SerialPort
@@ -8,6 +9,8 @@ Public Class Ceta815
     Private ReadOnly _baudRate As Integer
     Private Shared _receivedBytesQueue As ObservableCollection(Of Byte)
     Private Shared _receivedTelegramsQueue as ObservableCollection(Of Ceta815Telegram)
+    Public Shared Property DifferentialPressure as Int16
+    Public Shared Property VolumeRatio As String
 
     Public Sub New(portName As String, baudRate As Integer)
         _portName = portName
@@ -19,9 +22,8 @@ Public Class Ceta815
         AddHandler _receivedTelegramsQueue.CollectionChanged, AddressOf ReceivedTelegramsQueueCollectionChangedHandler
     End Sub
 
-
     ''' <summary>
-    ''' @todo add comments for this function
+    '''     @todo add comments for this function
     ''' </summary>
     ''' <returns></returns>
     Public Function InitSerialConnection() As Boolean
@@ -182,7 +184,7 @@ Public Class Ceta815
                     Dim newTelegram As _
                             new Ceta815Telegram(telegramLength, telegramDeclaration, telegramData, telegramType)
                     _receivedTelegramsQueue.Add(newTelegram)
-                Else 
+                Else
                     Debug.WriteLine("crc for received message was not valid!")
                 End If
 
@@ -198,16 +200,27 @@ Public Class Ceta815
     Private Shared Sub ReceivedTelegramsQueueCollectionChangedHandler(sender As Object,
                                                                       e As NotifyCollectionChangedEventArgs)
         Debug.WriteLine(_receivedTelegramsQueue.Last().ToString())
+
+        ' @todo: discard all telegrams, which are not needed as response to a call or contain any results
+
+        If _receivedTelegramsQueue.Last().TelegramDeclarationString = "DifferentialPressure" Then
+            ' hey we have the differential pressure -> yay
+
+            Dim differentialPressureBytes as Byte() =
+                    {_receivedTelegramsQueue.Last().TelegramData(1), _receivedTelegramsQueue.Last().TelegramData(0)}
+
+            DifferentialPressure = BitConverter.ToInt16(differentialPressureBytes, 0)
+            Debug.WriteLine("Differential Pressure: " + DifferentialPressure.ToString())
+        End If
     End Sub
 End Class
 
 
 Public Class Ceta815Telegram
     Private ReadOnly _telegramLength As Byte
-    Private ReadOnly _telegramDeclaration as Byte
-    Private ReadOnly _telegramData as byte()
     Private ReadOnly _telegramType as TelegramType
     Private ReadOnly _telegramTime As Date
+    Private ReadOnly _telegramDeclaration as Byte
 
     Private ReadOnly _
         _controlTelegramsDeclarations =
@@ -237,11 +250,26 @@ Public Class Ceta815Telegram
     Public Sub New(telegramLength As Byte, telegramDeclaration As Byte, telegramData As Byte(),
                    telegramType As TelegramType)
         _telegramLength = telegramLength
-        _telegramData = telegramData
+        Me.TelegramData = telegramData
         _telegramDeclaration = telegramDeclaration
         _telegramType = telegramType
         _telegramTime = Now
+
+        If _telegramDeclaration >= &H01 And _telegramDeclaration <= &H12 Then
+            TelegramDeclarationString = _controlTelegramsDeclarations(_telegramDeclaration)
+        ElseIf _telegramDeclaration >= &H80 and _telegramDeclaration <= &H8F Then
+            TelegramDeclarationString = _resultsTelegramsDeclarations(_telegramDeclaration - &H80)
+        ElseIf _telegramDeclaration = &H9F Then
+            TelegramDeclarationString = "ResultsEndTelegram"
+        ElseIf _telegramDeclaration >= &HC0 And _telegramDeclaration <= &HC8 Then
+            TelegramDeclarationString = _otherDeclarations(_telegramDeclaration - &HC0)
+        Else
+            TelegramDeclarationString = ""
+        End If
     End Sub
+
+    Public Property TelegramDeclarationString As String
+    Public Property TelegramData as Byte()
 
     Public Overrides Function ToString() As String
         Dim outputString = "Telegram: " + _telegramTime.ToLongTimeString() + vbCrLf
@@ -249,20 +277,13 @@ Public Class Ceta815Telegram
         Dim stringLength = "- Length: " + _telegramLength.ToString()
         Dim stringData = "- Data: "
 
-        If _telegramDeclaration >= &H01 And _telegramDeclaration <= &H12 Then
-            stringDeclaration += " => " + _controlTelegramsDeclarations(_telegramDeclaration)
-        ElseIf _telegramDeclaration >= &H80 and _telegramDeclaration <= &H8F Then
-            stringDeclaration += " => " + _resultsTelegramsDeclarations(_telegramDeclaration - &H80)
-        ElseIf _telegramDeclaration = &H9F Then
-            stringDeclaration += " => " + "ResultsEndTelegram"
-        ElseIf _telegramDeclaration >= &HC0 And _telegramDeclaration <= &HC8 Then
-            stringDeclaration += " => " + _otherDeclarations(_telegramDeclaration - &HC0)
-        End If
+        stringDeclaration += " => " + TelegramDeclarationString
 
         outputString += stringDeclaration + vbCrLf + stringLength + vbCrLf
 
+        ' @todo: write comment for lambda function in _telegramData.Aggregate( .. )
         If _telegramType = TelegramType.WithDataBlock Then
-            stringData += _telegramData.Aggregate("", Function(current, b) current + b.ToString("X2") + " ")
+            stringData += TelegramData.Aggregate("", Function(current, b) current + b.ToString("X2") + " ")
         Else
             stringData += "no data!"
         End If
