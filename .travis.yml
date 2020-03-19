@@ -1,2 +1,5 @@
 language: visualbasic
 solution: demoCetaTest.sln
+
+script:
+  - msbuild /p:Configuration=Debug demoCetaTest.sln
