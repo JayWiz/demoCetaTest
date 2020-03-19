@@ -21,8 +21,8 @@ Public Class Ceta815
 
 
     ''' <summary>
-    ''' @todo test
-    ''' @body here is some text
+    ''' @todo add comments for this function
+    ''' TODO: different type of todo comment
     ''' </summary>
     ''' <returns></returns>
     Public Function InitSerialConnection() As Boolean
