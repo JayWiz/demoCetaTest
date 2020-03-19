@@ -19,6 +19,12 @@ Public Class Ceta815
         AddHandler _receivedTelegramsQueue.CollectionChanged, AddressOf ReceivedTelegramsQueueCollectionChangedHandler
     End Sub
 
+
+    ''' <summary>
+    ''' @todo test
+    ''' @body here is some text
+    ''' </summary>
+    ''' <returns></returns>
     Public Function InitSerialConnection() As Boolean
         _comPort = New SerialPort
         Try
