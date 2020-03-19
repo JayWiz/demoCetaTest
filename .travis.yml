@@ -1,4 +1,4 @@
-language: visualbasic
+language: csharp
 solution: demoCetaTest.sln
 
 script:
