@@ -1,7 +1,7 @@
 language: csharp
 solution: demoCetaTest.sln
 mono: none
-dotnet: 2.1.502
+dotnet: 3.0.100
 
 script:
-  - msbuild /p:Configuration=Debug demoCetaTest.sln
+  - dotnet build /p:Configuration=Debug demoCetaTest.sln
