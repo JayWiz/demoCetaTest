@@ -1,7 +1,7 @@
 ﻿Imports System.Collections.ObjectModel
 Imports System.Collections.Specialized
 Imports System.IO.Ports
-Imports System.Text
+Imports System.Threading
 
 Public Class Ceta815
     Private Shared _comPort As SerialPort
@@ -9,8 +9,9 @@ Public Class Ceta815
     Private ReadOnly _baudRate As Integer
     Private Shared _receivedBytesQueue As ObservableCollection(Of Byte)
     Private Shared _receivedTelegramsQueue as ObservableCollection(Of Ceta815Telegram)
-    Public Shared Property DifferentialPressure as Int16
-    Public Shared Property VolumeRatio As String
+    Public Shared Property DifferentialPressure as Short
+    Public Shared Property VolumeRatio As Double
+    Public Shared Property Result as String
 
     Public Sub New(portName As String, baudRate As Integer)
         _portName = portName
@@ -82,6 +83,9 @@ Public Class Ceta815
                 _comPort.DiscardOutBuffer()
                 _comPort.Write(command, 0, command.Length)
             End If
+
+            ' Thread.Sleep()
+
             Return True
         Catch ex As Exception
             Debug.WriteLine("ex @ SendCommand: " + ex.ToString())
@@ -117,6 +121,7 @@ Public Class Ceta815
             _receivedBytesQueue.Add(_comPort.ReadByte())
         Loop
     End Sub
+
 
     Private Shared Sub ReceivedBytesQueueCollectionChangedHandler(sender As Object,
                                                                   e As NotifyCollectionChangedEventArgs)
@@ -199,18 +204,38 @@ Public Class Ceta815
 
     Private Shared Sub ReceivedTelegramsQueueCollectionChangedHandler(sender As Object,
                                                                       e As NotifyCollectionChangedEventArgs)
-        Debug.WriteLine(_receivedTelegramsQueue.Last().ToString())
+        ' Debug.WriteLine(_receivedTelegramsQueue.Last().ToString())
 
         ' @todo: discard all telegrams, which are not needed as response to a call or contain any results
+        ' @todo: track something like e.g. last connection date
+
+        If _receivedTelegramsQueue.Last().TelegramDeclarationString = "ResultsHeader" Then
+            Dim resultByte As Byte = _receivedTelegramsQueue.Last().TelegramData(1)
+            Select Case resultByte
+                Case &H01
+                    Result = "PASS"
+                Case &H21
+                    Result = "Volume too low"
+                Case &H22
+                    Result = "Volume too high"
+                Case Else
+                    Result = "FAIL"
+            End Select
+            Debug.WriteLine("Result: " + Result.ToString())
+        End If
 
         If _receivedTelegramsQueue.Last().TelegramDeclarationString = "DifferentialPressure" Then
-            ' hey we have the differential pressure -> yay
-
             Dim differentialPressureBytes as Byte() =
                     {_receivedTelegramsQueue.Last().TelegramData(1), _receivedTelegramsQueue.Last().TelegramData(0)}
-
             DifferentialPressure = BitConverter.ToInt16(differentialPressureBytes, 0)
             Debug.WriteLine("Differential Pressure: " + DifferentialPressure.ToString())
+        End If
+
+        If _receivedTelegramsQueue.Last().TelegramDeclarationString = "VolumeRatio" Then
+            Dim volumeRatioBytes As Byte() =
+                    {_receivedTelegramsQueue.Last().TelegramData(1), _receivedTelegramsQueue.Last().TelegramData(0)}
+            VolumeRatio = BitConverter.ToInt16(volumeRatioBytes, 0)/100
+            Debug.WriteLine("Volume Ratio: " + VolumeRatio.ToString())
         End If
     End Sub
 End Class
