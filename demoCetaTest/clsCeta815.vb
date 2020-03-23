@@ -17,6 +17,9 @@ Public Class Ceta815
     Private Shared _lastResultsEndTelegramTelegram as Ceta815Telegram
     Private Shared _lastSwitchEventsOnOffTelegram as Ceta815Telegram
 
+    ' @todo: implement functionality of this timer
+    Private Shared _connectionTimer As Timer
+
     Public Property DifferentialPressure as Short
     Public Property VolumeRatio As Double
     Public Property Result as String
@@ -51,6 +54,8 @@ Public Class Ceta815
         AddHandler _receivedBytesQueue.CollectionChanged, AddressOf ReceivedBytesQueueCollectionChangedHandler
         AddHandler _receivedTelegramsQueue.CollectionChanged, AddressOf ReceivedTelegramsQueueCollectionChangedHandler
         AddHandler _comPort.DataReceived, AddressOf ComPortDataReceivedHandler
+
+        ' @todo: setup watchdog timer?
     End Sub
 
     ''' <summary>
@@ -125,8 +130,9 @@ Public Class Ceta815
                 Dim crcBytes As Byte() = BitConverter.GetBytes(crc)
                 command(3) = crcBytes(1)            ' CRC high byte
                 command(4) = crcBytes(0)            ' CRC low byte
+                ' @todo: problem, comPort write still possible, even if not plugged in anymore!
                 _comPort.DiscardOutBuffer()
-                _comPort.Write(command, 0, command.Length)
+                _comPort.Write(command, 0, command.Length)      
                 Return True
             ElseIf declarationByte = &H0E Then
                 ReDim command(5)
@@ -138,6 +144,7 @@ Public Class Ceta815
                 Dim crcBytes As Byte() = BitConverter.GetBytes(crc)
                 command(4) = crcBytes(1)
                 command(5) = crcBytes(0)
+                ' @todo: problem, comPort write still possible, even if not plugged in anymore!
                 _comPort.DiscardOutBuffer()
                 _comPort.Write(command, 0, command.Length)
                 Return True
@@ -298,7 +305,7 @@ Public Class Ceta815
                 End If
 
                 ' remove old data
-                ' @todo optimize deletion of old data in _receivedBytesQueue, could cause problems
+                ' @todo: optimize deletion of old data in _receivedBytesQueue, could cause problems
                 For i = 5 + telegramLength - 1 To 0 step - 1
                     _receivedBytesQueue.RemoveAt(i)
                 Next
