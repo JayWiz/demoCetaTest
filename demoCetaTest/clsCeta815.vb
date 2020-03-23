@@ -9,92 +9,198 @@ Public Class Ceta815
     Private ReadOnly _baudRate As Integer
     Private Shared _receivedBytesQueue As ObservableCollection(Of Byte)
     Private Shared _receivedTelegramsQueue as ObservableCollection(Of Ceta815Telegram)
-    Public Shared Property DifferentialPressure as Short
-    Public Shared Property VolumeRatio As Double
-    Public Shared Property Result as String
+    Public Property DifferentialPressure as Short
+    Public Property VolumeRatio As Double
+    Public Property Result as String
+
+    Private ReadOnly _resultStopwatch as Stopwatch
+
+    Private Shared _lastConnectionTestTelegram as Ceta815Telegram
+    Private Shared _lastResultsHeaderTelegram as Ceta815Telegram
+    Private Shared _lastDifferentialPressureTelegram as Ceta815Telegram
+    Private Shared _lastVolumeRatioTelegram as Ceta815Telegram
+    Private Shared _lastResultsEndTelegramTelegram as Ceta815Telegram
+    Private Shared _lastSwitchEventsOnOffTelegram as Ceta815Telegram
 
     Public Sub New(portName As String, baudRate As Integer)
+        'init member
         _portName = portName
         _baudRate = baudRate
         _receivedBytesQueue = New ObservableCollection(Of Byte)
         _receivedTelegramsQueue = New ObservableCollection(Of Ceta815Telegram)
+        _resultStopwatch = new Stopwatch()
 
+        ' serialPort stuff
+        _comPort = New SerialPort With {
+            .BaudRate = _baudRate,
+            .PortName = _portName,
+            .DataBits = 8,
+            .StopBits = StopBits.One,
+            .Parity = Parity.None,
+            .Handshake = Handshake.None,
+            .DiscardNull = False,
+            .ReceivedBytesThreshold = 1
+        }
+        _comPort.Open()
+
+        ' attach event handler
         AddHandler _receivedBytesQueue.CollectionChanged, AddressOf ReceivedBytesQueueCollectionChangedHandler
         AddHandler _receivedTelegramsQueue.CollectionChanged, AddressOf ReceivedTelegramsQueueCollectionChangedHandler
+        AddHandler _comPort.DataReceived, AddressOf ComPortDataReceivedHandler
     End Sub
 
     ''' <summary>
     '''     @todo add comments for this function
     ''' </summary>
     ''' <returns></returns>
-    Public Function InitSerialConnection() As Boolean
-        _comPort = New SerialPort
+    Public Function Init() As Boolean
         Try
-            _comPort.BaudRate = _baudRate
-            _comPort.PortName = _portName
-            _comPort.DataBits = 8
-            _comPort.StopBits = StopBits.One
-            _comPort.Parity = Parity.None
-            _comPort.Handshake = Handshake.None
-            _comPort.DiscardNull = False
-            _comPort.ReceivedBytesThreshold = 1
-            _comPort.Open()
-
-            If _comPort.IsOpen Then
-
-                ' @todo test connection with ceta
-                Debug.WriteLine("comPort initialization succeeded!")
-
-                AddHandler _comPort.DataReceived, AddressOf ComPortDataReceivedHandler
-                Return True
-            Else
+            If Not ConnectionTest() Then
+                Debug.WriteLine("ConnectionTest failed!")
                 Return False
             End If
-        Catch ex As Exception
-            Debug.WriteLine(ex.ToString())
-            Return False
-        End Try
-    End Function
-
-    Public Function SendCommand(declarationByte As Byte)
-
-        Try
-            Dim telegramLengthByte As Byte
-            Dim telegramType As Ceta815Telegram.TelegramType
-            Dim command As Byte()
-
-            If declarationByte >= &H01 And declarationByte <= &H07 Then
-                telegramType = Ceta815Telegram.TelegramType.WithoutDataBlock
-                telegramLengthByte = &H0
+            Debug.WriteLine("ConnectionTest succeeded!")
+            If Not SwitchEventsOnOff() Then
+                Debug.WriteLine("SwitchOnOff failed!")
+                Return False
             End If
-
-            If telegramType = Ceta815Telegram.TelegramType.WithoutDataBlock Then
-                ReDim command(4)
-                command(0) = &H0D                   ' start byte
-                command(1) = telegramLengthByte
-                command(2) = declarationByte
-
-                Dim crc As UShort = ComputeCrc16(command, 3)
-                Dim crcBytes As Byte() = BitConverter.GetBytes(crc)
-
-                command(3) = crcBytes(1)            ' CRC high byte
-                command(4) = crcBytes(0)            ' CRC low byte
-
-                _comPort.DiscardOutBuffer()
-                _comPort.Write(command, 0, command.Length)
-            End If
-
-            ' Thread.Sleep()
-
+            Debug.WriteLine("SwitchOnOff succeeded!")
             Return True
         Catch ex As Exception
-            Debug.WriteLine("ex @ SendCommand: " + ex.ToString())
+            DebugMessage(ex, "InitSerialConnection")
             Return False
         End Try
     End Function
 
     ''' <summary>
-    '''     Computes crc16 for given data and length of data.
+    ''' @todo: write comments for this function
+    ''' @todo: add more security checks
+    ''' </summary>
+    ''' <returns></returns>
+    Public Function ExecuteTest()
+        Try
+            If SendCommand(&H05)
+                ' Wait 7 seconds
+                _resultStopwatch.Restart()
+                While _resultStopwatch.Elapsed.Seconds < 7
+                End While
+
+                ' @todo: check if this type of validation is correct
+                If _lastResultsEndTelegramTelegram IsNot Nothing Then
+                    Dim telegramAge As TimeSpan = Now - _lastResultsEndTelegramTelegram.TelegramTime
+                    If telegramAge.TotalSeconds < 30 Then
+                        _lastResultsEndTelegramTelegram = Nothing
+                        Return True
+                    Else
+                        _lastResultsEndTelegramTelegram = Nothing
+                        Return False
+                    End If
+                Else
+                    Return False
+                End If
+            Else
+                Return False
+            End If
+
+        Catch ex As Exception
+            DebugMessage(ex, "ExecuteTest")
+            Return False
+        End Try
+    End Function
+
+    Private Shared Function SendCommand(declarationByte As Byte, Optional eventByte As Byte = &H00)
+        Try
+            Dim command As Byte()
+
+            If declarationByte >= &H01 And declarationByte <= &H07 Then
+                ReDim command(4)
+                command(0) = &H0D                   ' start byte
+                command(1) = &H00                   ' length byte
+                command(2) = declarationByte
+                Dim crc As UShort = ComputeCrc16(command, 3)
+                Dim crcBytes As Byte() = BitConverter.GetBytes(crc)
+                command(3) = crcBytes(1)            ' CRC high byte
+                command(4) = crcBytes(0)            ' CRC low byte
+                _comPort.DiscardOutBuffer()
+                _comPort.Write(command, 0, command.Length)
+                Return True
+            ElseIf declarationByte = &H0E Then
+                ReDim command(5)
+                command(0) = &H0D
+                command(1) = &H01
+                command(2) = declarationByte
+                command(3) = eventByte
+                Dim crc As UShort = ComputeCrc16(command, 4)
+                Dim crcBytes As Byte() = BitConverter.GetBytes(crc)
+                command(4) = crcBytes(1)
+                command(5) = crcBytes(0)
+                _comPort.DiscardOutBuffer()
+                _comPort.Write(command, 0, command.Length)
+                Return True
+            Else
+                Return False
+            End If
+
+        Catch ex As Exception
+            DebugMessage(ex, "SendCommand")
+            Return False
+        End Try
+    End Function
+
+    Private Function ConnectionTest() As Boolean
+        Try
+            If SendCommand(&H01) Then
+                Thread.Sleep(100)
+                ' @todo: check if this type of validation is correct
+                If _lastConnectionTestTelegram IsNot Nothing
+                    Dim telegramAge As TimeSpan = Now - _lastConnectionTestTelegram.TelegramTime
+                    If telegramAge.TotalSeconds < 30 Then
+                        _lastConnectionTestTelegram = Nothing
+                        Return True
+                    Else
+                        _lastConnectionTestTelegram = Nothing
+                        Return False
+                    End If
+                Else
+                    Return False
+                End If
+            Else
+                Return False
+            End If
+        Catch ex As Exception
+            DebugMessage(ex, "ConnectionTest")
+            Return False
+        End Try
+    End Function
+
+    Private Shared Function SwitchEventsOnOff() As Boolean
+        Try
+            If SendCommand(&H0E, &H01) Then
+                Thread.Sleep(100)
+                ' @todo: check if this type of validation is correct
+                If _lastSwitchEventsOnOffTelegram IsNot Nothing
+                    Dim telegramAge As TimeSpan = Now - _lastSwitchEventsOnOffTelegram.TelegramTime
+                    If telegramAge.TotalSeconds < 30 Then
+                        _lastSwitchEventsOnOffTelegram = Nothing
+                        Return True
+                    Else
+                        _lastSwitchEventsOnOffTelegram = Nothing
+                        Return False
+                    End If
+                Else
+                    Return False
+                End If
+            Else
+                Return False
+            End If
+        Catch ex As Exception
+            DebugMessage(ex, "SwitchEventsOnOff")
+            Return False
+        End Try
+    End Function
+
+    ''' <summary>
+    '''     Computes crc16 for given data and length.
     ''' </summary>
     ''' <param name="crcData">Array of bytes with data which crc should be calculated for.</param>
     ''' <param name="crcLength">Count of bytes in data.</param>
@@ -122,9 +228,14 @@ Public Class Ceta815
         Loop
     End Sub
 
-
+    ''' <summary>
+    ''' @todo: write comments for this method
+    ''' @todo: optimize this method
+    ''' </summary>
+    ''' <param name="sender"></param>
+    ''' <param name="e"></param>
     Private Shared Sub ReceivedBytesQueueCollectionChangedHandler(sender As Object,
-                                                                  e As NotifyCollectionChangedEventArgs)
+                                                           e As NotifyCollectionChangedEventArgs)
         If (e.Action = NotifyCollectionChangedAction.Add) Then
 
             ' remove old artifacts until start bit detected
@@ -133,7 +244,7 @@ Public Class Ceta815
                     _receivedBytesQueue.RemoveAt(0)
                 Loop
             Catch ex As Exception
-                Debug.WriteLine("ex @ remove old artifacts: " + ex.ToString())
+                DebugMessage(ex, "ReceivedByteQueueCollectionChangedHandler, remove old artifacts")
                 Exit Sub
             End Try
 
@@ -181,7 +292,7 @@ Public Class Ceta815
                 ' compute crc from received telegram
                 Dim computedCrcBytes As Byte() = BitConverter.GetBytes(ComputeCrc16(receivedTelegram,
                                                                                     receivedTelegram.Count()))
-
+                ' @todo: do something if received crc is invalid
                 ' compare received and computed crc
                 If computedCrcBytes.SequenceEqual(receivedCrcBytes) Then
                     Debug.WriteLine("crc for received message was valid")
@@ -202,40 +313,66 @@ Public Class Ceta815
         End If
     End Sub
 
-    Private Shared Sub ReceivedTelegramsQueueCollectionChangedHandler(sender As Object,
-                                                                      e As NotifyCollectionChangedEventArgs)
-        ' Debug.WriteLine(_receivedTelegramsQueue.Last().ToString())
+    Private Shared Sub DebugMessage(ex As Exception, message As String)
+        If True Then
+            Debug.WriteLine("Exception @ " + message + ": " + ex.ToString())
+        End If
+    End Sub
 
-        ' @todo: discard all telegrams, which are not needed as response to a call or contain any results
-        ' @todo: track something like e.g. last connection date
+    Private Sub ReceivedTelegramsQueueCollectionChangedHandler(sender As Object,
+                                                               e As NotifyCollectionChangedEventArgs)
+        If _receivedTelegramsQueue.Count > 0 Then
+            Select Case _receivedTelegramsQueue.Last().TelegramDeclarationString
 
-        If _receivedTelegramsQueue.Last().TelegramDeclarationString = "ResultsHeader" Then
-            Dim resultByte As Byte = _receivedTelegramsQueue.Last().TelegramData(1)
-            Select Case resultByte
-                Case &H01
-                    Result = "PASS"
-                Case &H21
-                    Result = "Volume too low"
-                Case &H22
-                    Result = "Volume too high"
-                Case Else
-                    Result = "FAIL"
+                Case "ConnectionTest"
+                    _lastConnectionTestTelegram = _receivedTelegramsQueue.Last()
+
+                Case "SwitchEventsOnOff"
+                    _lastSwitchEventsOnOffTelegram = _receivedTelegramsQueue.Last()
+
+                Case "ResultsHeader"
+                    _lastResultsHeaderTelegram = _receivedTelegramsQueue.Last()
+
+                    Dim resultByte As Byte = _lastResultsHeaderTelegram.TelegramData(1)
+                    Select Case resultByte
+                        Case &H01
+                            Result = "PASS"
+                        Case &H21
+                            Result = "Volume too low"
+                        Case &H22
+                            Result = "Volume too high"
+                        Case Else
+                            Result = "FAIL"
+                    End Select
+                    Debug.WriteLine("Result: " + Result.ToString())
+
+                Case "DifferentialPressure"
+                    _lastDifferentialPressureTelegram = _receivedTelegramsQueue.Last()
+
+                    Dim differentialPressureBytes as Byte() =
+                            {_lastDifferentialPressureTelegram.TelegramData(1),
+                             _lastDifferentialPressureTelegram.TelegramData(0)}
+                    DifferentialPressure = BitConverter.ToInt16(differentialPressureBytes, 0)
+                    Debug.WriteLine("Differential Pressure: " + DifferentialPressure.ToString())
+
+                Case "VolumeRatio"
+                    _lastVolumeRatioTelegram = _receivedTelegramsQueue.Last()
+
+                    Dim volumeRatioBytes As Byte() =
+                            {_lastVolumeRatioTelegram.TelegramData(1), _lastVolumeRatioTelegram.TelegramData(0)}
+                    VolumeRatio = BitConverter.ToInt16(volumeRatioBytes, 0)/100
+                    Debug.WriteLine("Volume Ratio: " + VolumeRatio.ToString())
+
+                Case "ResultsEndTelegram"
+                    _lastResultsEndTelegramTelegram = _receivedTelegramsQueue.Last()
+
             End Select
-            Debug.WriteLine("Result: " + Result.ToString())
-        End If
 
-        If _receivedTelegramsQueue.Last().TelegramDeclarationString = "DifferentialPressure" Then
-            Dim differentialPressureBytes as Byte() =
-                    {_receivedTelegramsQueue.Last().TelegramData(1), _receivedTelegramsQueue.Last().TelegramData(0)}
-            DifferentialPressure = BitConverter.ToInt16(differentialPressureBytes, 0)
-            Debug.WriteLine("Differential Pressure: " + DifferentialPressure.ToString())
-        End If
-
-        If _receivedTelegramsQueue.Last().TelegramDeclarationString = "VolumeRatio" Then
-            Dim volumeRatioBytes As Byte() =
-                    {_receivedTelegramsQueue.Last().TelegramData(1), _receivedTelegramsQueue.Last().TelegramData(0)}
-            VolumeRatio = BitConverter.ToInt16(volumeRatioBytes, 0)/100
-            Debug.WriteLine("Volume Ratio: " + VolumeRatio.ToString())
+            Try
+                _receivedTelegramsQueue.RemoveAt(0)
+            Catch ex As Exception
+                DebugMessage(ex, "ReceivedTelegramsQueueCollectionChangedHandler, remove latest telegram")
+            End Try
         End If
     End Sub
 End Class
@@ -244,7 +381,6 @@ End Class
 Public Class Ceta815Telegram
     Private ReadOnly _telegramLength As Byte
     Private ReadOnly _telegramType as TelegramType
-    Private ReadOnly _telegramTime As Date
     Private ReadOnly _telegramDeclaration as Byte
 
     Private ReadOnly _
@@ -278,7 +414,7 @@ Public Class Ceta815Telegram
         Me.TelegramData = telegramData
         _telegramDeclaration = telegramDeclaration
         _telegramType = telegramType
-        _telegramTime = Now
+        TelegramTime = Now
 
         If _telegramDeclaration >= &H01 And _telegramDeclaration <= &H12 Then
             TelegramDeclarationString = _controlTelegramsDeclarations(_telegramDeclaration)
@@ -295,9 +431,10 @@ Public Class Ceta815Telegram
 
     Public Property TelegramDeclarationString As String
     Public Property TelegramData as Byte()
+    Public Property TelegramTime as Date
 
     Public Overrides Function ToString() As String
-        Dim outputString = "Telegram: " + _telegramTime.ToLongTimeString() + vbCrLf
+        Dim outputString = "Telegram: " + TelegramTime.ToLongTimeString() + vbCrLf
         Dim stringDeclaration = "- Declaration: " + _telegramDeclaration.ToString("X2")
         Dim stringLength = "- Length: " + _telegramLength.ToString()
         Dim stringData = "- Data: "

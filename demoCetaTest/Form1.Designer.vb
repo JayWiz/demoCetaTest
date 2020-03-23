@@ -23,41 +23,62 @@ Partial Class Form1
     <System.Diagnostics.DebuggerStepThrough()> _
     Private Sub InitializeComponent()
         Me.Button1 = New System.Windows.Forms.Button()
-        Me.ComboBox1 = New System.Windows.Forms.ComboBox()
+        Me.tbResult = New System.Windows.Forms.TextBox()
+        Me.tbDifferentialPressure = New System.Windows.Forms.TextBox()
+        Me.tbVolumeRatio = New System.Windows.Forms.TextBox()
         Me.SuspendLayout
         '
         'Button1
         '
         Me.Button1.Location = New System.Drawing.Point(241, 173)
         Me.Button1.Name = "Button1"
-        Me.Button1.Size = New System.Drawing.Size(217, 23)
+        Me.Button1.Size = New System.Drawing.Size(95, 23)
         Me.Button1.TabIndex = 0
-        Me.Button1.Text = "Button1"
+        Me.Button1.Text = "ExecuteTest"
         Me.Button1.UseVisualStyleBackColor = true
         '
-        'ComboBox1
+        'tbResult
         '
-        Me.ComboBox1.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList
-        Me.ComboBox1.FormattingEnabled = true
-        Me.ComboBox1.Items.AddRange(New Object() {"Connection test (0x01)", "Lock front panel keys (0x02)", "Unlock front panel keys (0x03)", "Stop (0x04)", "Start (0x05)", "System information 1 (0x06)", "Cycle count (0x07)"})
-        Me.ComboBox1.Location = New System.Drawing.Point(241, 146)
-        Me.ComboBox1.Name = "ComboBox1"
-        Me.ComboBox1.Size = New System.Drawing.Size(217, 21)
-        Me.ComboBox1.TabIndex = 1
+        Me.tbResult.Enabled = false
+        Me.tbResult.Location = New System.Drawing.Point(241, 202)
+        Me.tbResult.Name = "tbResult"
+        Me.tbResult.Size = New System.Drawing.Size(95, 20)
+        Me.tbResult.TabIndex = 1
+        '
+        'tbDifferentialPressure
+        '
+        Me.tbDifferentialPressure.Enabled = false
+        Me.tbDifferentialPressure.Location = New System.Drawing.Point(241, 228)
+        Me.tbDifferentialPressure.Name = "tbDifferentialPressure"
+        Me.tbDifferentialPressure.Size = New System.Drawing.Size(95, 20)
+        Me.tbDifferentialPressure.TabIndex = 2
+        '
+        'tbVolumeRatio
+        '
+        Me.tbVolumeRatio.Enabled = false
+        Me.tbVolumeRatio.Location = New System.Drawing.Point(241, 254)
+        Me.tbVolumeRatio.Name = "tbVolumeRatio"
+        Me.tbVolumeRatio.Size = New System.Drawing.Size(95, 20)
+        Me.tbVolumeRatio.TabIndex = 3
         '
         'Form1
         '
         Me.AutoScaleDimensions = New System.Drawing.SizeF(6!, 13!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
         Me.ClientSize = New System.Drawing.Size(800, 450)
-        Me.Controls.Add(Me.ComboBox1)
+        Me.Controls.Add(Me.tbVolumeRatio)
+        Me.Controls.Add(Me.tbDifferentialPressure)
+        Me.Controls.Add(Me.tbResult)
         Me.Controls.Add(Me.Button1)
         Me.Name = "Form1"
         Me.Text = "Form1"
         Me.ResumeLayout(false)
+        Me.PerformLayout
 
 End Sub
 
     Friend WithEvents Button1 As Button
-    Friend WithEvents ComboBox1 As ComboBox
+    Friend WithEvents tbResult As TextBox
+    Friend WithEvents tbDifferentialPressure As TextBox
+    Friend WithEvents tbVolumeRatio As TextBox
 End Class
