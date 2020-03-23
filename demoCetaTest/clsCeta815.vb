@@ -9,12 +9,7 @@ Public Class Ceta815
     Private ReadOnly _baudRate As Integer
     Private Shared _receivedBytesQueue As ObservableCollection(Of Byte)
     Private Shared _receivedTelegramsQueue as ObservableCollection(Of Ceta815Telegram)
-    Public Property DifferentialPressure as Short
-    Public Property VolumeRatio As Double
-    Public Property Result as String
-
     Private ReadOnly _resultStopwatch as Stopwatch
-
     Private Shared _lastConnectionTestTelegram as Ceta815Telegram
     Private Shared _lastResultsHeaderTelegram as Ceta815Telegram
     Private Shared _lastDifferentialPressureTelegram as Ceta815Telegram
@@ -22,6 +17,15 @@ Public Class Ceta815
     Private Shared _lastResultsEndTelegramTelegram as Ceta815Telegram
     Private Shared _lastSwitchEventsOnOffTelegram as Ceta815Telegram
 
+    Public Property DifferentialPressure as Short
+    Public Property VolumeRatio As Double
+    Public Property Result as String
+
+    ''' <summary>
+    ''' Initializes a new instance of <c>Ceta815</c>-Class
+    ''' </summary>
+    ''' <param name="portName">Name of serialPort</param>
+    ''' <param name="baudRate">Baud rate</param>
     Public Sub New(portName As String, baudRate As Integer)
         'init member
         _portName = portName
@@ -50,7 +54,7 @@ Public Class Ceta815
     End Sub
 
     ''' <summary>
-    '''     @todo add comments for this function
+    ''' Initializes Ceta815. Checks whether connection is established and sets correct result feedback.
     ''' </summary>
     ''' <returns></returns>
     Public Function Init() As Boolean
@@ -73,11 +77,11 @@ Public Class Ceta815
     End Function
 
     ''' <summary>
-    ''' @todo: write comments for this function
-    ''' @todo: add more security checks
+    ''' Starts Ceta815 test program and stores results in corresponding properties.
     ''' </summary>
     ''' <returns></returns>
     Public Function ExecuteTest()
+        ' @todo: add more security checks
         Try
             If SendCommand(&H05)
                 ' Wait 7 seconds
@@ -147,7 +151,7 @@ Public Class Ceta815
         End Try
     End Function
 
-    Private Function ConnectionTest() As Boolean
+    Private Shared Function ConnectionTest() As Boolean
         Try
             If SendCommand(&H01) Then
                 Thread.Sleep(100)
@@ -199,12 +203,6 @@ Public Class Ceta815
         End Try
     End Function
 
-    ''' <summary>
-    '''     Computes crc16 for given data and length.
-    ''' </summary>
-    ''' <param name="crcData">Array of bytes with data which crc should be calculated for.</param>
-    ''' <param name="crcLength">Count of bytes in data.</param>
-    ''' <returns></returns>
     Private Shared Function ComputeCrc16(crcData As IEnumerable, crcLength As Integer) As UShort
         Dim crc16 As UShort = &HFFFF
         Const crcPolynomial As UShort = &HA001
@@ -228,16 +226,11 @@ Public Class Ceta815
         Loop
     End Sub
 
-    ''' <summary>
-    ''' @todo: write comments for this method
-    ''' @todo: optimize this method
-    ''' </summary>
-    ''' <param name="sender"></param>
-    ''' <param name="e"></param>
+    ' @todo: optimize this method
     Private Shared Sub ReceivedBytesQueueCollectionChangedHandler(sender As Object,
                                                            e As NotifyCollectionChangedEventArgs)
+        
         If (e.Action = NotifyCollectionChangedAction.Add) Then
-
             ' remove old artifacts until start bit detected
             Try
                 Do Until _receivedBytesQueue.First() = &HD
@@ -440,11 +433,10 @@ Public Class Ceta815Telegram
         Dim stringData = "- Data: "
 
         stringDeclaration += " => " + TelegramDeclarationString
-
         outputString += stringDeclaration + vbCrLf + stringLength + vbCrLf
 
-        ' @todo: write comment for lambda function in _telegramData.Aggregate( .. )
         If _telegramType = TelegramType.WithDataBlock Then
+            ' append every element of Telegram to stringData, converted to hex (2 digits) and insert space
             stringData += TelegramData.Aggregate("", Function(current, b) current + b.ToString("X2") + " ")
         Else
             stringData += "no data!"
