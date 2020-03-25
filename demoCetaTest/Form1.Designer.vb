@@ -26,46 +26,57 @@ Partial Class Form1
         Me.tbResult = New System.Windows.Forms.TextBox()
         Me.tbDifferentialPressure = New System.Windows.Forms.TextBox()
         Me.tbVolumeRatio = New System.Windows.Forms.TextBox()
-        Me.SuspendLayout
+        Me.Button2 = New System.Windows.Forms.Button()
+        Me.SuspendLayout()
         '
         'Button1
         '
-        Me.Button1.Location = New System.Drawing.Point(241, 173)
+        Me.Button1.Location = New System.Drawing.Point(12, 12)
         Me.Button1.Name = "Button1"
         Me.Button1.Size = New System.Drawing.Size(95, 23)
         Me.Button1.TabIndex = 0
         Me.Button1.Text = "ExecuteTest"
-        Me.Button1.UseVisualStyleBackColor = true
+        Me.Button1.UseVisualStyleBackColor = True
         '
         'tbResult
         '
-        Me.tbResult.Enabled = false
-        Me.tbResult.Location = New System.Drawing.Point(241, 202)
+        Me.tbResult.Enabled = False
+        Me.tbResult.Location = New System.Drawing.Point(12, 41)
         Me.tbResult.Name = "tbResult"
         Me.tbResult.Size = New System.Drawing.Size(95, 20)
         Me.tbResult.TabIndex = 1
         '
         'tbDifferentialPressure
         '
-        Me.tbDifferentialPressure.Enabled = false
-        Me.tbDifferentialPressure.Location = New System.Drawing.Point(241, 228)
+        Me.tbDifferentialPressure.Enabled = False
+        Me.tbDifferentialPressure.Location = New System.Drawing.Point(12, 67)
         Me.tbDifferentialPressure.Name = "tbDifferentialPressure"
         Me.tbDifferentialPressure.Size = New System.Drawing.Size(95, 20)
         Me.tbDifferentialPressure.TabIndex = 2
         '
         'tbVolumeRatio
         '
-        Me.tbVolumeRatio.Enabled = false
-        Me.tbVolumeRatio.Location = New System.Drawing.Point(241, 254)
+        Me.tbVolumeRatio.Enabled = False
+        Me.tbVolumeRatio.Location = New System.Drawing.Point(12, 93)
         Me.tbVolumeRatio.Name = "tbVolumeRatio"
         Me.tbVolumeRatio.Size = New System.Drawing.Size(95, 20)
         Me.tbVolumeRatio.TabIndex = 3
         '
+        'Button2
+        '
+        Me.Button2.Location = New System.Drawing.Point(113, 12)
+        Me.Button2.Name = "Button2"
+        Me.Button2.Size = New System.Drawing.Size(95, 23)
+        Me.Button2.TabIndex = 4
+        Me.Button2.Text = "Trigger INIT"
+        Me.Button2.UseVisualStyleBackColor = True
+        '
         'Form1
         '
-        Me.AutoScaleDimensions = New System.Drawing.SizeF(6!, 13!)
+        Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
-        Me.ClientSize = New System.Drawing.Size(800, 450)
+        Me.ClientSize = New System.Drawing.Size(282, 140)
+        Me.Controls.Add(Me.Button2)
         Me.Controls.Add(Me.tbVolumeRatio)
         Me.Controls.Add(Me.tbDifferentialPressure)
         Me.Controls.Add(Me.tbResult)
@@ -81,4 +92,5 @@ End Sub
     Friend WithEvents tbResult As TextBox
     Friend WithEvents tbDifferentialPressure As TextBox
     Friend WithEvents tbVolumeRatio As TextBox
+    Friend WithEvents Button2 As Button
 End Class

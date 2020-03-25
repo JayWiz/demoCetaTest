@@ -1,6 +1,4 @@
-﻿Imports System.ComponentModel
-
-Public Class Form1
+﻿Public Class Form1
     Private _oCeta815 As Ceta815
 
     Private Sub Button1_Click(sender As Object, e As EventArgs) Handles Button1.Click
@@ -8,7 +6,15 @@ Public Class Form1
             tbDifferentialPressure.Text = _oCeta815.DifferentialPressure
             tbVolumeRatio.Text = _oCeta815.VolumeRatio
             tbResult.Text = _oCeta815.Result
-        End If
+            If _oCeta815.Result = "PASS" Then
+                tbResult.BackColor = Color.LightGreen
+            Else
+                tbResult.BackColor = Color.Red
+            End If
+            Debug.WriteLine("ExecuteTest succeeded")
+        Else
+            Debug.WriteLine("ExecuteTest failed")
+        End IF
     End Sub
 
     Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
@@ -16,5 +22,9 @@ Public Class Form1
         If Not _oCeta815.Init() Then
             MsgBox("Initialization of Ceta815 failed!")
         End If
+    End Sub
+
+    Private Sub Button2_Click(sender As Object, e As EventArgs) Handles Button2.Click
+        _oCeta815.Init()
     End Sub
 End Class
