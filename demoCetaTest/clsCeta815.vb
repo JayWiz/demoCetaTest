@@ -17,7 +17,6 @@ Public Class Ceta815
     Private Shared _lastResultsEndTelegramTelegram as Ceta815Telegram
     Private Shared _lastSwitchEventsOnOffTelegram as Ceta815Telegram
 
-    ' @todo: implement functionality of this timer
     ' use Windows.Forms.Timer instead of Timers.Timer! does guarantee timer raises its events
     ' on thread that created it
     Private Shared _connectionTimer As Windows.Forms.Timer
@@ -64,7 +63,6 @@ Public Class Ceta815
         AddHandler _connectionTimer.Tick, AddressOf ConnectionTimerTickHandler
 
         ' timer stuff
-        ' @todo: setup connection timer, mutex, watchdog?
         _connectionTimer.Start()
 
     End Sub
@@ -113,7 +111,7 @@ Public Class Ceta815
                     End While
 
                     ' @todo: check if this type of validation is correct
-                    ' @todo: validate also age of differentialPressure and volumeRatio telegrams
+                    ' @todo: validate also age of differentialPressure and volumeRatio telegrams?
                     ' @todo: case without device, only volumeRatio, but no differentialPressure telegram received!
                     If _lastResultsEndTelegramTelegram IsNot Nothing Then
                         Dim telegramAge As TimeSpan = Now - _lastResultsEndTelegramTelegram.TelegramTime
@@ -262,7 +260,7 @@ Public Class Ceta815
 
 #Region "Handler"
 
-    Private Sub ConnectionTimerTickHandler(sender As Object, e As EventArgs)
+    Private Shared Sub ConnectionTimerTickHandler(sender As Object, e As EventArgs)
         Debug.WriteLine("Shots fired")
         If Not ConnectionTest() Then
             _comPort.Close()
