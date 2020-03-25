@@ -69,20 +69,7 @@ Public Class Ceta815
 
     End Sub
 
-    Private Sub ConnectionTimerTickHandler(sender As Object, e As EventArgs)
-        Debug.WriteLine("Shots fired")
-        If Not ConnectionTest() Then
-            _comPort.Close()
-            Thread.Sleep(500)
-            _comPort.Open()
-            If Not ConnectionTest() Then
-                Debug.WriteLine("alarm!")
-            Else 
-                Debug.WriteLine("Successfully reconnected")
-            End If
-        End If
-        ' Throw New NotImplementedException
-    End Sub
+    
 
     ''' <summary>
     '''     Initializes Ceta815. Checks whether connection is established and sets correct result feedback.
@@ -275,10 +262,20 @@ Public Class Ceta815
 
 #Region "Handler"
 
-    'Private Shared Sub ConnectionTimerElapsedHandler(sender As Object, e As Timer)
-    '    Debug.WriteLine("Shots fired")
-    '    ConnectionTest()
-    'End Sub
+    Private Sub ConnectionTimerTickHandler(sender As Object, e As EventArgs)
+        Debug.WriteLine("Shots fired")
+        If Not ConnectionTest() Then
+            _comPort.Close()
+            Thread.Sleep(500)
+            _comPort.Open()
+            If Not ConnectionTest() Then
+                Debug.WriteLine("alarm!")
+            Else 
+                Debug.WriteLine("Successfully reconnected")
+            End If
+        End If
+        ' Throw New NotImplementedException
+    End Sub
 
     Private Shared Sub ComPortDataReceivedHandler(sender As Object, e As SerialDataReceivedEventArgs)
         Do Until _comPort.BytesToRead = 0
