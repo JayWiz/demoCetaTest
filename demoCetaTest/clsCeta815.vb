@@ -16,12 +16,9 @@ Public Class Ceta815
     Private Shared _lastVolumeRatioTelegram as Ceta815Telegram
     Private Shared _lastResultsEndTelegramTelegram as Ceta815Telegram
     Private Shared _lastSwitchEventsOnOffTelegram as Ceta815Telegram
-
-    ' use Windows.Forms.Timer instead of Timers.Timer! does guarantee timer raises its events
-    ' on thread that created it
+    Private const MaximumTelegramAge as Integer = 5
     Private Shared _connectionTimer As Windows.Forms.Timer
-    ' doubts whether usage of mutex is necessary and correct, cross-thread or cross-process?
-    ' Private Shared _comPortMutex As Mutex
+    Private Shared _lockVariable as Object
 
     Public Property DifferentialPressure as Short
     Public Property VolumeRatio As Double
@@ -39,6 +36,7 @@ Public Class Ceta815
         _receivedBytesQueue = New ObservableCollection(Of Byte)
         _receivedTelegramsQueue = New ObservableCollection(Of Ceta815Telegram)
         _resultStopwatch = new Stopwatch()
+        _lockVariable = new Object()
         _connectionTimer = new Windows.Forms.Timer With {
             .Interval = 10000 ' 10 sec?
             }
@@ -64,10 +62,8 @@ Public Class Ceta815
 
         ' timer stuff
         _connectionTimer.Start()
-
     End Sub
 
-    
 
     ''' <summary>
     '''     Initializes Ceta815. Checks whether connection is established and sets correct result feedback.
@@ -96,9 +92,15 @@ Public Class Ceta815
     '''     Starts Ceta815 test program and stores results in corresponding properties.
     ''' </summary>
     ''' <returns></returns>
+    ''' @todo: check whether result of ExecuteTest() is True, if Result is not equal to 'PASS'
     Public Function ExecuteTest()
         ' @todo: add more security checks
         Try
+            ' remove old data
+            VolumeRatio = 0
+            DifferentialPressure = 0        ' @todo: check if 0 is okay for diff pressure
+            Result = ""
+
             If ConnectionTest() Then
                 If SendCommand(&H5) Then
                     ' wait until we get a resultsEndTelegram, but don't wait too long
@@ -110,12 +112,9 @@ Public Class Ceta815
                         End If
                     End While
 
-                    ' @todo: check if this type of validation is correct
-                    ' @todo: validate also age of differentialPressure and volumeRatio telegrams?
-                    ' @todo: case without device, only volumeRatio, but no differentialPressure telegram received!
                     If _lastResultsEndTelegramTelegram IsNot Nothing Then
                         Dim telegramAge As TimeSpan = Now - _lastResultsEndTelegramTelegram.TelegramTime
-                        If telegramAge.TotalSeconds < 30 Then
+                        If telegramAge.TotalSeconds < MaximumTelegramAge Then
                             _lastResultsEndTelegramTelegram = Nothing
                             Return True
                         Else
@@ -169,12 +168,12 @@ Public Class Ceta815
                 Return False
             End If
 
+            ' lol: try ConnectionTest() here xD
             ' @todo: problem, comPort write still possible, even if not plugged in anymore!
             _comPort.DiscardOutBuffer()
             _comPort.Write(command, 0, command.Length)
 
             Return True
-
 
         Catch ex As Exception
             DebugMessage(ex, "SendCommand")
@@ -183,40 +182,39 @@ Public Class Ceta815
     End Function
 
     Private Shared Function ConnectionTest() As Boolean
-        Try
-            If SendCommand(&H01) Then
-                Thread.Sleep(100)
-                ' @todo: check if this type of validation is correct
-                ' @todo: move telegram age to Ceta815Telegram
-                If _lastConnectionTestTelegram IsNot Nothing Then
-                    Dim telegramAge As TimeSpan = Now - _lastConnectionTestTelegram.TelegramTime
-                    If telegramAge.TotalSeconds < 30 Then
-                        _lastConnectionTestTelegram = Nothing
-                        Return True
+        SyncLock _lockVariable
+            Try
+                If SendCommand(&H01) Then
+                    Thread.Sleep(100)
+                    If _lastConnectionTestTelegram IsNot Nothing Then
+                        Dim telegramAge As TimeSpan = Now - _lastConnectionTestTelegram.TelegramTime
+                        If telegramAge.TotalSeconds < MaximumTelegramAge Then
+                            _lastConnectionTestTelegram = Nothing
+                            Return True
+                        Else
+                            _lastConnectionTestTelegram = Nothing
+                            Return False
+                        End If
                     Else
-                        _lastConnectionTestTelegram = Nothing
                         Return False
                     End If
                 Else
                     Return False
                 End If
-            Else
+            Catch ex As Exception
+                DebugMessage(ex, "ConnectionTest")
                 Return False
-            End If
-        Catch ex As Exception
-            DebugMessage(ex, "ConnectionTest")
-            Return False
-        End Try
+            End Try
+        End SyncLock
     End Function
 
     Private Shared Function SwitchEventsOnOff() As Boolean
         Try
             If SendCommand(&H0E, &H01) Then
                 Thread.Sleep(100)
-                ' @todo: check if this type of validation is correct
                 If _lastSwitchEventsOnOffTelegram IsNot Nothing
                     Dim telegramAge As TimeSpan = Now - _lastSwitchEventsOnOffTelegram.TelegramTime
-                    If telegramAge.TotalSeconds < 30 Then
+                    If telegramAge.TotalSeconds < MaximumTelegramAge Then
                         _lastSwitchEventsOnOffTelegram = Nothing
                         Return True
                     Else
@@ -261,18 +259,16 @@ Public Class Ceta815
 #Region "Handler"
 
     Private Shared Sub ConnectionTimerTickHandler(sender As Object, e As EventArgs)
-        Debug.WriteLine("Shots fired")
         If Not ConnectionTest() Then
             _comPort.Close()
             Thread.Sleep(500)
             _comPort.Open()
             If Not ConnectionTest() Then
                 Debug.WriteLine("alarm!")
-            Else 
+            Else
                 Debug.WriteLine("Successfully reconnected")
             End If
         End If
-        ' Throw New NotImplementedException
     End Sub
 
     Private Shared Sub ComPortDataReceivedHandler(sender As Object, e As SerialDataReceivedEventArgs)
@@ -283,6 +279,7 @@ Public Class Ceta815
 
     Private Sub ReceivedTelegramsQueueCollectionChangedHandler(sender As Object,
                                                                e As NotifyCollectionChangedEventArgs)
+
         ' @todo: comment this out
         If _receivedTelegramsQueue.Count > 0 Then
             Debug.WriteLine("Received Telegram: " + _receivedTelegramsQueue.Last.TelegramDeclarationString)
