@@ -92,13 +92,12 @@ Public Class Ceta815
     '''     Starts Ceta815 test program and stores results in corresponding properties.
     ''' </summary>
     ''' <returns></returns>
-    ''' @todo: check whether result of ExecuteTest() is True, if Result is not equal to 'PASS'
     Public Function ExecuteTest()
         ' @todo: add more security checks
         Try
             ' remove old data
             VolumeRatio = 0
-            DifferentialPressure = 0        ' @todo: check if 0 is okay for diff pressure
+            DifferentialPressure = 0        
             Result = ""
 
             If ConnectionTest() Then
@@ -280,10 +279,10 @@ Public Class Ceta815
     Private Sub ReceivedTelegramsQueueCollectionChangedHandler(sender As Object,
                                                                e As NotifyCollectionChangedEventArgs)
 
-        ' @todo: comment this out
-        If _receivedTelegramsQueue.Count > 0 Then
-            Debug.WriteLine("Received Telegram: " + _receivedTelegramsQueue.Last.TelegramDeclarationString)
-        End If
+        ' Remove comments to show every received telegrams
+        ' If _receivedTelegramsQueue.Count > 0 Then
+        '     Debug.WriteLine("Received Telegram: " + _receivedTelegramsQueue.Last.TelegramDeclarationString)
+        ' End If
 
         If _receivedTelegramsQueue.Count > 0 Then
             Select Case _receivedTelegramsQueue.Last().TelegramDeclarationString
@@ -340,7 +339,7 @@ Public Class Ceta815
         End If
     End Sub
 
-    ' @todo: optimize this method
+    ' @todo: optimize this method if needed, especially deletion of old data, could cause problems 
     Private Shared Sub ReceivedBytesQueueCollectionChangedHandler(sender As Object,
                                                                   e As NotifyCollectionChangedEventArgs)
 
@@ -413,7 +412,6 @@ Public Class Ceta815
                 End If
 
                 ' remove old data
-                ' @todo: optimize deletion of old data in _receivedBytesQueue, could cause problems
                 For i = 5 + telegramLength - 1 To 0 step - 1
                     _receivedBytesQueue.RemoveAt(i)
                 Next
