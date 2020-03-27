@@ -1,6 +1,4 @@
-﻿Imports System.IO
-
-Public Class Form1
+﻿Public Class Form1
     Private _oCeta815 As Ceta815
 
     Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
@@ -11,33 +9,68 @@ Public Class Form1
 
         Trace.Listeners.Add(new TextWriterTraceListener("trace.log") With {.TraceOutputOptions = TraceOptions.Timestamp})
         Trace.AutoFlush = true
-        
-        
-
-        'Dim  tr1 As TextWriterTraceListener = new TextWriterTraceListener(System.Console.Out)
-        'Debug.Listeners.Add(tr1)
-        
-        'Dim tr2 As TextWriterTraceListener = new TextWriterTraceListener(System.IO.File.CreateText("Output.txt"))
-        'Debug.Listeners.Add(tr2)
-
-
     End Sub
 
     Private Sub Button1_Click(sender As Object, e As EventArgs) Handles Button1.Click
-        If _oCeta815.ExecuteTest() Then
-            tbDifferentialPressure.Text = _oCeta815.DifferentialPressure
-            tbVolumeRatio.Text = _oCeta815.VolumeRatio
-            tbResult.Text = _oCeta815.Result
-            If _oCeta815.Result = "PASS" Then
-                tbResult.BackColor = Color.LightGreen
+
+        Dim laufzeit as New Stopwatch
+        Dim errorCode = 0
+        Dim cetaBusy = True
+        Dim result = ""
+        Dim volume_ratio = ""
+        Dim diff_pressure = ""
+
+        If errorCode = 0 Then
+            ' TEST START
+            laufzeit.Restart()
+            If _oCeta815.ConnectionTest() Then
+                If _oCeta815.ExecuteTest() Then
+                    ' test was executed properly, received result of Ceta815
+                    If _oCeta815.Result = "PASS" Then
+                        result = "PASS"
+                        volume_ratio = _oCeta815.VolumeRatio
+                        diff_pressure = _oCeta815.DifferentialPressure
+                        errorCode = 0
+                    Else If _oCeta815.Result = "Volume too low"
+                        result = "FAIL"
+                        volume_ratio = _oCeta815.VolumeRatio
+                        errorCode = 1208
+                    Else If _oCeta815.Result = "FAIL"
+                        result = "FAIL"
+                        volume_ratio = _oCeta815.VolumeRatio
+                        diff_pressure = _oCeta815.DifferentialPressure
+                        errorCode = 1209
+                    End If
+                Else
+                    ' didnt get proper result
+                    result = "FAIL"
+                    errorCode = 1207
+                End If
             Else
-                tbResult.BackColor = Color.Red
+                ' ConnectionTest() failed, Ceta815 not responding
+                result = "FAIL"
+                errorCode = 1206
             End If
-            Debug.WriteLine("ExecuteTest succeeded")
+            
+
+            laufzeit.Stop()
+            Debug.WriteLine("doTestSt12_Ceta() Laufzeit =>" & laufzeit.ElapsedMilliseconds/1000 & "s")
+            Debug.WriteLine("errorCode: " + errorCode.ToString() + ", result: " + result + ", volume_ratio: " + volume_ratio + ", diff_pressure: " + diff_pressure)
+
+
+        End If
+
+
+        tbDifferentialPressure.Text = diff_pressure
+        tbVolumeRatio.Text = volume_ratio
+        tbResult.Text = result
+        If result = "PASS" Then
+            tbResult.BackColor = Color.LightGreen
         Else
-            Debug.WriteLine("ExecuteTest failed")
-        End IF
+            tbResult.BackColor = Color.Red
+        End If
     End Sub
+
 
     Private Sub Button2_Click(sender As Object, e As EventArgs) Handles Button2.Click
         _oCeta815.Init()
@@ -66,6 +99,4 @@ Public Class Form1
             Application.DoEvents()
         End While
     End Sub
-
-    
 End Class

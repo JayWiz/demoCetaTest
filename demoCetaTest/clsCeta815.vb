@@ -181,7 +181,7 @@ Public Class Ceta815
         End Try
     End Function
 
-    Private Shared Function ConnectionTest() As Boolean
+    Public Function ConnectionTest() As Boolean
         SyncLock _lockVariable
             Try
                 If SendCommand(&H01) Then
@@ -258,7 +258,7 @@ Public Class Ceta815
 
 #Region "Handler"
 
-    Private Shared Sub ConnectionTimerTickHandler(sender As Object, e As EventArgs)
+    Private Sub ConnectionTimerTickHandler(sender As Object, e As EventArgs)
         If Not ConnectionTest() Then
             _comPort.Close()
             Thread.Sleep(500)
