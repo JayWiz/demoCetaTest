@@ -2,13 +2,21 @@
     Private _oCeta815 As Ceta815
 
     Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
-        _oCeta815 = New Ceta815("COM1", 115200)
-        If Not _oCeta815.Init() Then
-            MsgBox("Initialization of Ceta815 failed!")
-        End If
 
-        Trace.Listeners.Add(new TextWriterTraceListener("trace.log") With {.TraceOutputOptions = TraceOptions.Timestamp})
-        Trace.AutoFlush = true
+        Try
+            _oCeta815 = New Ceta815("COMA1", 115200)
+            If Not _oCeta815.Init() Then
+                MsgBox("Ceta815 Initialization failed!")
+                Application.Exit()
+            End If
+        Catch ex As Exception
+            MsgBox("Ceta815 Initialization failed!")
+            Application.Exit()
+        End Try
+
+        Trace.Listeners.Add(New TextWriterTraceListener("trace.log") With {.TraceOutputOptions = TraceOptions.Timestamp})
+        Trace.AutoFlush = True
+
     End Sub
 
     Private Sub Button1_Click(sender As Object, e As EventArgs) Handles Button1.Click
@@ -23,7 +31,9 @@
         If errorCode = 0 Then
             ' TEST START
             laufzeit.Restart()
+            ' check whether Ceta815 is responding
             If _oCeta815.ConnectionTest() Then
+                ' check whether Ceta815 can execute test properly
                 If _oCeta815.ExecuteTest() Then
                     ' test was executed properly, received result of Ceta815
                     If _oCeta815.Result = "PASS" Then
@@ -31,11 +41,11 @@
                         volume_ratio = _oCeta815.VolumeRatio
                         diff_pressure = _oCeta815.DifferentialPressure
                         errorCode = 0
-                    Else If _oCeta815.Result = "Volume too low"
+                    ElseIf _oCeta815.Result = "Volume too low" Then
                         result = "FAIL"
                         volume_ratio = _oCeta815.VolumeRatio
                         errorCode = 1208
-                    Else If _oCeta815.Result = "FAIL"
+                    ElseIf _oCeta815.Result = "FAIL" Then
                         result = "FAIL"
                         volume_ratio = _oCeta815.VolumeRatio
                         diff_pressure = _oCeta815.DifferentialPressure

@@ -120,11 +120,11 @@ Partial Class Form1
         Me.GroupBox2.Controls.Add(Me.tbFail)
         Me.GroupBox2.Controls.Add(Me.Button2)
         Me.GroupBox2.Controls.Add(Me.tbPass)
-        Me.GroupBox2.Location = New System.Drawing.Point(12, 145)
+        Me.GroupBox2.Location = New System.Drawing.Point(140, 12)
         Me.GroupBox2.Name = "GroupBox2"
         Me.GroupBox2.Size = New System.Drawing.Size(122, 155)
         Me.GroupBox2.TabIndex = 9
-        Me.GroupBox2.TabStop = false
+        Me.GroupBox2.TabStop = False
         Me.GroupBox2.Text = "Debug"
         '
         'nudCount
@@ -136,7 +136,7 @@ Partial Class Form1
         '
         'Label2
         '
-        Me.Label2.AutoSize = true
+        Me.Label2.AutoSize = True
         Me.Label2.Location = New System.Drawing.Point(88, 132)
         Me.Label2.Name = "Label2"
         Me.Label2.Size = New System.Drawing.Size(23, 13)
@@ -145,7 +145,7 @@ Partial Class Form1
         '
         'Label1
         '
-        Me.Label1.AutoSize = true
+        Me.Label1.AutoSize = True
         Me.Label1.Location = New System.Drawing.Point(88, 106)
         Me.Label1.Name = "Label1"
         Me.Label1.Size = New System.Drawing.Size(30, 13)
@@ -159,13 +159,13 @@ Partial Class Form1
         Me.Button3.Size = New System.Drawing.Size(110, 23)
         Me.Button3.TabIndex = 5
         Me.Button3.Text = "AutoTest"
-        Me.Button3.UseVisualStyleBackColor = true
+        Me.Button3.UseVisualStyleBackColor = True
         '
         'Form1
         '
-        Me.AutoScaleDimensions = New System.Drawing.SizeF(6!, 13!)
+        Me.AutoScaleDimensions = New System.Drawing.SizeF(6.0!, 13.0!)
         Me.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font
-        Me.ClientSize = New System.Drawing.Size(147, 312)
+        Me.ClientSize = New System.Drawing.Size(272, 177)
         Me.Controls.Add(Me.GroupBox2)
         Me.Controls.Add(Me.GroupBox1)
         Me.Name = "Form1"
