@@ -4,7 +4,7 @@
     Private Sub Form1_Load(sender As Object, e As EventArgs) Handles MyBase.Load
 
         Try
-            _oCeta815 = New Ceta815("COMA1", 115200)
+            _oCeta815 = New Ceta815("COM1", 115200)
             If Not _oCeta815.Init() Then
                 MsgBox("Ceta815 Initialization failed!")
                 Application.Exit()
